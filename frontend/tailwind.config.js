@@ -3,15 +3,23 @@ const { join } = require('path');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [
+    darkMode: ['class'],
+    content: [
     join(
       __dirname,
       '{src,pages,components,app}/**/*!(*.stories|*.spec).{ts,tsx,html}'
     ),
-    ...createGlobPatternsForDependencies(__dirname),
-  ],
+        ...createGlobPatternsForDependencies(__dirname)
+    ],
   theme: {
-    extend: {},
+  	extend: {
+  		borderRadius: {
+  			lg: 'var(--radius)',
+  			md: 'calc(var(--radius) - 2px)',
+  			sm: 'calc(var(--radius) - 4px)'
+  		},
+  		colors: {}
+  	}
   },
-  plugins: [],
+  plugins: [require("tailwindcss-animate")],
 };
