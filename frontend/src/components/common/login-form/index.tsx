@@ -31,13 +31,14 @@ export default function LoginForm({
         'http://localhost:5000/auth/login',
         formData,
         {
-          withCredentials: true, // Include cookies
+          withCredentials: true,
         }
       );
 
       if (response.status === 200) {
         console.log('Login successful:', response.data);
-        router.push('/profile'); // Redirect to profile page
+        const redirectUrl = response.data.redirectUrl || '/profile';
+        router.push(redirectUrl);
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -52,7 +53,7 @@ export default function LoginForm({
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = 'http://localhost:5000/auth/google'; // Redirect to Google OAuth
+    window.location.href = 'http://localhost:5000/auth/google';
   };
 
   return (

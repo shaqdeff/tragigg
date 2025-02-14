@@ -35,13 +35,14 @@ export default function SignUpForm({
         'http://localhost:5000/auth/register',
         formData,
         {
-          withCredentials: true, // Include cookies
+          withCredentials: true,
         }
       );
 
       if (response.status === 201) {
         console.log('User created successfully:', response.data);
-        router.push('/login'); // Redirect to login page
+        const redirectUrl = response.data.redirectUrl || '/login';
+        router.push(redirectUrl);
       }
     } catch (error) {
       console.error(
@@ -53,7 +54,7 @@ export default function SignUpForm({
   };
 
   const handleGoogleSignUp = () => {
-    window.location.href = 'http://localhost:5000/auth/google'; // Redirect to Google OAuth
+    window.location.href = 'http://localhost:5000/auth/google';
   };
 
   return (
