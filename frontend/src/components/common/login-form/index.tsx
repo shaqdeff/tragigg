@@ -6,30 +6,41 @@ import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
+import { useForm, SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Eye, EyeOff } from 'lucide-react';
+
+// schema for login form
+const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+type LoginFormInputs = z.infer<typeof loginSchema>;
 
 export default function LoginForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<'form'>) {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const router = useRouter();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    setFormData((prev) => ({ ...prev, [id]: value }));
-  };
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormInputs>({
+    resolver: zodResolver(loginSchema),
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const onSubmit: SubmitHandler<LoginFormInputs> = async (data) => {
+    setLoginError(null);
     try {
       const response = await axios.post(
         'http://localhost:5000/auth/login',
-        formData,
+        data,
         {
           withCredentials: true,
         }
@@ -42,12 +53,13 @@ export default function LoginForm({
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error(
-          'Login failed:',
-          error.response?.data?.message || error.message
-        );
+        // handle incorrect password or email
+        const errorMessage =
+          error.response?.data?.message || 'Login failed. Please try again.';
+        setLoginError(errorMessage);
       } else {
         console.error('Login failed:', (error as Error).message);
+        setLoginError('An unexpected error occurred. Please try again.');
       }
     }
   };
@@ -59,7 +71,7 @@ export default function LoginForm({
   return (
     <form
       className={cn('flex flex-col gap-6', className)}
-      onSubmit={handleSubmit}
+      onSubmit={handleSubmit(onSubmit)}
       {...props}
     >
       <div className="flex flex-col items-center gap-2 text-center">
@@ -75,9 +87,11 @@ export default function LoginForm({
             id="email"
             type="email"
             placeholder="m@example.com"
-            required
-            onChange={handleChange}
+            {...register('email')}
           />
+          {errors.email && (
+            <p className="text-sm text-red-500">{errors.email.message}</p>
+          )}
         </div>
         <div className="grid gap-2">
           <div className="flex items-center">
@@ -89,16 +103,33 @@ export default function LoginForm({
               Forgot your password?
             </a>
           </div>
-          <Input
-            id="password"
-            type="password"
-            required
-            onChange={handleChange}
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Enter your password"
+              {...register('password')}
+            />
+            <button
+              type="button"
+              className="absolute right-2 top-2.5"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+          {errors.password && (
+            <p className="text-sm text-red-500">{errors.password.message}</p>
+          )}
         </div>
+        {loginError && (
+          <p className="text-sm text-red-500 text-center -mt-3">{loginError}</p>
+        )}
         <Button type="submit" className="w-full">
           Login
         </Button>
+
+        {/* Google login button */}
         <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-slate-200 dark:after:border-slate-800">
           <span className="relative z-10 bg-white px-2 text-slate-500 dark:bg-slate-950 dark:text-slate-400">
             Or continue with
