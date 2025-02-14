@@ -47,7 +47,10 @@ router.post(
       });
       await newUser.save();
 
-      res.status(201).json({ message: 'User created successfully' });
+      res.status(201).json({
+        message: 'User created successfully',
+        redirectUrl: process.env.FRONTEND_URL,
+      });
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: 'Internal server error' });
@@ -87,7 +90,11 @@ router.post('/login', async (req: any, res: any) => {
       maxAge: 604800000, // 7 days
     });
 
-    res.json({ message: 'Login successful', user });
+    res.json({
+      message: 'Login successful',
+      user,
+      redirectUrl: process.env.FRONTEND_URL,
+    });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -114,7 +121,7 @@ router.get(
       path: '/',
     });
 
-    res.redirect('/');
+    res.redirect(process.env.FRONTEND_URL || '/');
   }
 );
 
@@ -124,6 +131,7 @@ router.post('/logout', (req, res) => {
   res.json({ message: 'Logged out successfully' });
 });
 
+// protected route
 router.get('/profile', authMiddleWare, async (req: Request, res: Response) => {
   try {
     const user = await User.findById(req.user).select('-password');

@@ -18,7 +18,15 @@ const MONGO_URI = process.env.MONGO_URI ?? '';
 const app = express();
 
 // middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      callback(null, true);
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(
