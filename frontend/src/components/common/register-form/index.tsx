@@ -65,7 +65,7 @@ export default function SignUpForm({
     setBackendError(null);
     try {
       const response = await axios.post(
-        'http://localhost:5000/auth/register',
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/register`,
         data,
         {
           withCredentials: true,
@@ -73,8 +73,12 @@ export default function SignUpForm({
       );
 
       if (response.status === 201) {
-        const redirectUrl = response.data.redirectUrl || '/login';
-        router.push(redirectUrl);
+        if (response.data.requiresVerification) {
+          window.location.href = response.data.redirectUrl;
+        } else {
+          const redirectUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || '/';
+          router.push(redirectUrl);
+        }
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -167,7 +171,6 @@ export default function SignUpForm({
               />
             )}
           />
-          {/* No error message for phone since it's optional */}
         </div>
 
         {/* Password */}

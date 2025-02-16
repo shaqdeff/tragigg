@@ -25,6 +25,7 @@ export default function LoginForm({
 }: React.ComponentPropsWithoutRef<'form'>) {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const {
@@ -36,10 +37,11 @@ export default function LoginForm({
   });
 
   const onSubmit: SubmitHandler<LoginFormInputs> = async (data) => {
+    setIsLoading(true);
     setLoginError(null);
     try {
       const response = await axios.post(
-        'http://localhost:5000/auth/login',
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/login`,
         data,
         {
           withCredentials: true,
@@ -47,13 +49,14 @@ export default function LoginForm({
       );
 
       if (response.status === 200) {
-        console.log('Login successful:', response.data);
-        const redirectUrl = response.data.redirectUrl || '/profile';
-        router.push(redirectUrl);
+        if (response.data.user && !response.data.user.isVerified) {
+          router.push(`/verify-email?email=${data.email}`);
+        } else {
+          router.push('/');
+        }
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        // handle incorrect password or email
         const errorMessage =
           error.response?.data?.message || 'Login failed. Please try again.';
         setLoginError(errorMessage);
@@ -65,7 +68,7 @@ export default function LoginForm({
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = 'http://localhost:5000/auth/google';
+    window.location.href = `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/google`;
   };
 
   return (

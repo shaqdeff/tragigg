@@ -7,6 +7,8 @@ export interface IUser extends Document {
   phone: string;
   password: string;
   isVerified: boolean;
+  verificationCode: string;
+  verificationCodeExpires: Date | null;
   googleId?: string;
 }
 
@@ -23,7 +25,8 @@ const UserSchema: Schema = new Schema(
       },
     },
     phone: { type: String, required: false },
-    isVerified: { type: Boolean, default: false },
+    verificationCode: { type: String },
+    verificationCodeExpires: { type: Date, default: null },
   },
   {
     timestamps: true,

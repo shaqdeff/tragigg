@@ -2,8 +2,14 @@ import express, { Request, Response } from 'express';
 import { body } from 'express-validator';
 import passport from 'passport';
 import User from '../models/user.model';
-import { hashPassword, comparePassword, generateToken } from '../utils/auth';
+import {
+  hashPassword,
+  comparePassword,
+  generateToken,
+  generateVerificationCode,
+} from '../utils/auth';
 import authMiddleWare from '../middleware/auth.middleware';
+import { sendVerificationEmail } from '../services/email.service';
 
 const router: express.Router = express.Router();
 
@@ -25,31 +31,44 @@ router.post(
     try {
       const { firstName, lastName, email, phone, password } = req.body;
 
-      // trim the password
-      const trimmedPassword = password.trim();
-
-      // check if user already exists
       const existingUser = await User.findOne({ email });
       if (existingUser) {
         return res.status(400).json({ message: 'Email already exists' });
       }
 
-      // hash password
-      const hashedPassword = await hashPassword(trimmedPassword);
+      const hashedPassword = await hashPassword(password.trim());
+      const verificationCode = generateVerificationCode();
+      const verificationCodeExpires = new Date(Date.now() + 3600000);
 
-      // create user
       const newUser = new User({
         firstName,
         lastName,
         email,
         phone,
         password: hashedPassword,
+        isVerified: false,
+        verificationCode,
+        verificationCodeExpires,
       });
+
       await newUser.save();
 
+      const token = generateToken(newUser.id, newUser.email);
+
+      res.cookie('auth_token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 604800000,
+      });
+
+      // Send verification email with the code
+      await sendVerificationEmail(email, verificationCode, firstName);
+
       res.status(201).json({
-        message: 'User created successfully',
-        redirectUrl: process.env.FRONTEND_URL,
+        message: 'User created successfully. Please verify your email.',
+        requiresVerification: true,
+        redirectUrl: `/verify-email?email=${newUser.email}`,
       });
     } catch (error) {
       console.error(error);
@@ -80,19 +99,23 @@ router.post('/login', async (req: any, res: any) => {
     }
 
     // generate JWT token
-    const token = generateToken(user.id);
+    const token = generateToken(user.id, user.email);
 
     // store token in HTTP-only cookie
     res.cookie('auth_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 604800000, // 7 days
     });
 
-    res.json({
+    res.status(200).json({
       message: 'Login successful',
-      user,
+      user: {
+        id: user.id,
+        email: user.email,
+        isVerified: user.isVerified,
+      },
       redirectUrl: process.env.FRONTEND_URL,
     });
   } catch (error) {
@@ -109,21 +132,92 @@ router.get(
 
 router.get(
   '/google/callback',
-  passport.authenticate('google', { failureRedirect: '/' }),
-  (req: any, res) => {
-    const token = generateToken(req.user.id);
+  passport.authenticate('google', {
+    failureRedirect: `${process.env.FRONTEND_URL}/register`,
+  }),
+  async (req: any, res) => {
+    try {
+      const token = generateToken(req.user.id, req.user.email);
 
-    res.cookie('auth_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 604800000, // 7 days
-      path: '/',
-    });
+      res.cookie('auth_token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 604800000,
+        path: '/',
+      });
 
-    res.redirect(process.env.FRONTEND_URL || '/');
+      if (!req.user.isVerified) {
+        // For Google auth, generate verification code if needed
+        const verificationCode = generateVerificationCode();
+        const verificationCodeExpires = new Date(Date.now() + 3600000);
+
+        req.user.verificationCode = verificationCode;
+        req.user.verificationCodeExpires = verificationCodeExpires;
+        await req.user.save();
+
+        await sendVerificationEmail(
+          req.user.email,
+          verificationCode,
+          req.user.firstName
+        );
+
+        return res.redirect(
+          `${process.env.FRONTEND_URL}/verify-email?email=${req.user.email}&isVerified=${req.user.isVerified}`
+        );
+      }
+
+      res.redirect(process.env.FRONTEND_URL || '');
+    } catch (error) {
+      console.error('Google callback error:', error);
+      res.redirect('/login?error=auth_failed');
+    }
   }
 );
+
+// verify email
+router.post('/verify', async (req: any, res: any) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return res.status(400).json({ message: 'Email and code are required.' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: 'User not found' });
+    }
+
+    if (user.verificationCode !== code) {
+      return res.status(400).json({ message: 'Invalid verification code' });
+    }
+
+    if (
+      !user.verificationCodeExpires ||
+      user.verificationCodeExpires < new Date()
+    ) {
+      return res.status(400).json({ message: 'Verification code has expired' });
+    }
+
+    user.isVerified = true;
+    user.verificationCode = '';
+    user.verificationCodeExpires = null;
+    await user.save();
+
+    res.status(200).json({
+      message: 'Email verified successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        isVerified: true,
+      },
+      redirectUrl: process.env.FRONTEND_URL,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 // logout
 router.post('/logout', (req, res) => {

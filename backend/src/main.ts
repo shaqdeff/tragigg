@@ -13,6 +13,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const host = process.env.HOST ?? 'localhost';
 const port = process.env.PORT ? Number(process.env.PORT) : 8000;
+console.log('port:', port);
 const MONGO_URI = process.env.MONGO_URI ?? '';
 
 const app = express();

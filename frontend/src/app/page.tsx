@@ -1,7 +1,9 @@
-export default function Index() {
+import ProtectedRoute from './protected-route';
+
+export default function HomePage() {
   return (
-    <main>
-     Hey
-    </main>
+    <ProtectedRoute>
+      <main>Welcome to the homepage!</main>
+    </ProtectedRoute>
   );
 }

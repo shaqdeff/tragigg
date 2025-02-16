@@ -4,7 +4,7 @@ import { CheckIcon, ChevronsUpDown } from 'lucide-react';
 import * as RPNInput from 'react-phone-number-input';
 import flags from 'react-phone-number-input/flags';
 
-import { Button } from '@/components/ui/button';
+import { ButtonCustom } from '@/components/ui/button-custom';
 import {
   Command,
   CommandEmpty,
@@ -13,7 +13,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { Input } from '@/components/ui/input';
+import { InputCustom } from '@/components/ui/input-custom';
 import {
   Popover,
   PopoverContent,
@@ -62,8 +62,8 @@ const InputComponent = React.forwardRef<
   HTMLInputElement,
   React.ComponentProps<'input'>
 >(({ className, ...props }, ref) => (
-  <Input
-    className={cn('rounded-e-lg rounded-s-none', className)}
+  <InputCustom
+    className={cn('rounded-r-[10px]', className)}
     {...props}
     ref={ref}
   />
@@ -88,10 +88,10 @@ const CountrySelect = ({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
+        <ButtonCustom
           type="button"
           variant="outline"
-          className="flex gap-1 rounded-e-none rounded-s-lg border-r-0 px-3 focus:z-10"
+          className="flex gap-1 border-r-0 px-3 focus:z-10"
           disabled={disabled}
         >
           <FlagComponent
@@ -104,7 +104,7 @@ const CountrySelect = ({
               disabled ? 'hidden' : 'opacity-100'
             )}
           />
-        </Button>
+        </ButtonCustom>
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0">
         <Command>

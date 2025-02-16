@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
 
 dotenv.config();
 
@@ -21,6 +22,14 @@ export const comparePassword = async (
 };
 
 // generate a token
-export const generateToken = (userId: string): string => {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
+export const generateToken = (userId: string, email: string): string => {
+  return jwt.sign({ userId, email }, JWT_SECRET, { expiresIn: '7d' });
+};
+
+export const generateVerificationToken = () => {
+  return crypto.randomBytes(32).toString('hex');
+};
+
+export const generateVerificationCode = (): string => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
 };
